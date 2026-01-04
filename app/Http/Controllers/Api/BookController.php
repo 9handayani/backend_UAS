@@ -10,9 +10,37 @@ use Illuminate\Support\Str;
 
 class BookController extends Controller
 {
-    public function index()
+    /**
+     * Menampilkan daftar buku dengan fitur Pencarian dan Filter Kategori
+     */
+    public function index(Request $request) // PERBAIKAN: Tambahkan Request $request
     {
-        return response()->json(Book::with(['category'])->latest()->get());
+        // 1. Inisialisasi query dengan relasi kategori
+        $query = Book::with(['category']);
+
+        // 2. LOGIKA PENCARIAN (Keyword 'q')
+        // Ini yang membuat pencarian di Next.js berfungsi
+        if ($request->has('q') && $request->q != '') {
+            $search = $request->q;
+            $query->where(function($q) use ($search) {
+                $q->where('title', 'LIKE', "%{$search}%")
+                  ->orWhere('author', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // 3. LOGIKA FILTER KATEGORI (Slug)
+        // Berguna untuk halaman kategori agar tidak menampilkan semua buku
+        if ($request->has('category')) {
+            $query->whereHas('category', function($q) use ($request) {
+                $q->where('slug', $request->category);
+            });
+        }
+
+        // 4. Ambil data terbaru
+        // Gunakan get() agar data yang dikirim berupa Array (sesuai kode Next.js kamu)
+        $books = $query->latest()->get();
+
+        return response()->json($books);
     }
 
     public function store(Request $request)
@@ -32,7 +60,6 @@ class BookController extends Controller
 
         $validated['slug'] = Str::slug($request->title);
         
-        // Memastikan tipe data benar untuk angka
         $validated['discount'] = $request->filled('discount') ? (int) $request->discount : 0;
         $validated['rating']   = $request->filled('rating')   ? (float) $request->rating : 0;
 
@@ -48,7 +75,6 @@ class BookController extends Controller
     {
         $book = Book::findOrFail($id);
 
-        // 1. Validasi
         $validated = $request->validate([
             'category_id' => 'sometimes|required|exists:categories,id',
             'title'       => 'sometimes|required|string|max:255',
@@ -62,13 +88,10 @@ class BookController extends Controller
             'image'       => 'sometimes|required|string'
         ]);
 
-        // 2. Olah Slug
         if ($request->has('title')) {
             $validated['slug'] = Str::slug($request->title);
         }
 
-        // 3. LOGIKA KRUSIAL: Konversi Tipe Data
-        // Karena Next.js mengirim JSON, Laravel terkadang membaca angka sebagai string
         if ($request->has('discount')) {
             $validated['discount'] = (int) $request->discount;
         }
@@ -76,7 +99,6 @@ class BookController extends Controller
             $validated['rating'] = (double) $request->rating;
         }
 
-        // 4. Update data
         $book->update($validated);
 
         return response()->json([
