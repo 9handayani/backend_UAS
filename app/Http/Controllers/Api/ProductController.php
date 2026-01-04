@@ -22,8 +22,9 @@ class ProductController extends Controller
         if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function($q) use ($search) {
-                $q->where('title', 'LIKE', "%{$search}%")
-                ->orWhere('author', 'LIKE', "%{$search}%");
+                // Gunakan LOWER() untuk memaksa perbandingan dalam huruf kecil
+                $q->whereRaw('LOWER(title) LIKE ?', ["%".strtolower($search)."%"])
+                ->orWhereRaw('LOWER(author) LIKE ?', ["%".strtolower($search)."%"]);
             });
         }
 
@@ -31,8 +32,8 @@ class ProductController extends Controller
         if ($request->filled('category') && strtolower($request->category) != 'semua') {
             $categoryName = $request->category;
             $query->whereHas('category', function($q) use ($categoryName) {
-                // Menggunakan 'where' dengan lower agar "Novel" == "novel"
-                $q->where('name', 'LIKE', $categoryName);
+                // Cocokkan kategori tanpa peduli kapital/kecil
+                $q->whereRaw('LOWER(name) = ?', [strtolower($categoryName)]);
             });
         }
 
