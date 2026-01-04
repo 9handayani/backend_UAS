@@ -15,26 +15,32 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
+        // Menggunakan pagination agar performa lebih ringan jika buku sudah banyak
         $query = Book::with('category')->latest();
 
-        if ($request->has('q') && $request->q != '') {
+        // 1. Pencarian Kata Kunci (q)
+        if ($request->filled('q')) {
             $search = $request->q;
             $query->where(function($q) use ($search) {
                 $q->where('title', 'LIKE', "%{$search}%")
-                  ->orWhere('author', 'LIKE', "%{$search}%");
+                ->orWhere('author', 'LIKE', "%{$search}%");
             });
         }
 
-        if ($request->has('category') && $request->category != 'Semua') {
+        // 2. Filter Kategori (Case Insensitive)
+        if ($request->filled('category') && strtolower($request->category) != 'semua') {
             $categoryName = $request->category;
             $query->whereHas('category', function($q) use ($categoryName) {
-                $q->where('name', $categoryName);
+                // Menggunakan 'where' dengan lower agar "Novel" == "novel"
+                $q->where('name', 'LIKE', $categoryName);
             });
         }
+
+        $books = $query->get(); // Atau $query->paginate(10);
 
         return response()->json([
             'success' => true,
-            'data' => $query->get()
+            'data' => $books
         ], 200);
     }
 
