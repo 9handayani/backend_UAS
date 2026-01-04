@@ -20,7 +20,7 @@ return [
 'allowed_methods' => ['*'],
 
 // Tambahkan 127.0.0.1 agar jika kamu buka via IP tetap jalan
-'allowed_origins' => ['http://localhost:3000', 'http://127.0.0.1:3000'], 
+'allowed_origins' => ['https://bookshop-uas.vercel.app', 'http://localhost:3000', 'http://127.0.0.1:3000'], 
 
 'allowed_origins_patterns' => [],
 
